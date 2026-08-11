@@ -24,7 +24,11 @@ export default function StoryCard({ story, onSendToJira, jiraLoading }: StoryCar
   const copyText = view === 'gherkin' ? storyToGherkin(story) : storyToClassic(story);
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(copyText);
+    try {
+      await navigator.clipboard?.writeText(copyText);
+    } catch {
+      /* Clipboard API blocked (e.g. embedded iframe without permission) — fail silently. */
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
