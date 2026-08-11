@@ -131,7 +131,7 @@ export default function LandingPage() {
       <main className="flex-1">
         <section className="max-w-3xl mx-auto px-6 pt-24 pb-24 text-center">
           <p className="text-xs font-semibold text-brand-600 mb-5 tracking-widest uppercase">
-            PO Toolkit · Tool #1 of 13
+            PO Toolkit · Tool #3 of 12
           </p>
           <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-5 tracking-tight leading-tight">
             Write user stories<br />in seconds
@@ -330,7 +330,7 @@ export default function LandingPage() {
             </a>
             {' '}· No data stored on our servers
           </span>
-          <span>PO Toolkit #1 of 13</span>
+          <span>PO Toolkit #3 of 12</span>
         </div>
       </footer>
     </div>
