@@ -47,12 +47,22 @@ export default function Header({ showBackToHome = false }: HeaderProps) {
         {/* Right side */}
         <div className="flex items-center gap-3">
           {showBackToHome ? (
-            <a
-              href="/"
-              className="text-xs font-medium text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-lg px-3 py-1.5 transition-colors"
-            >
-              ← Home
-            </a>
+            <>
+              <a
+                href="https://ai-po-xavi-marin-suite.vercel.app"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs font-medium text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-lg px-3 py-1.5 transition-colors"
+              >
+                ← AI PO Suite
+              </a>
+              <a
+                href="/"
+                className="text-xs font-medium text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-lg px-3 py-1.5 transition-colors"
+              >
+                ← Home
+              </a>
+            </>
           ) : (
             <>
               <a

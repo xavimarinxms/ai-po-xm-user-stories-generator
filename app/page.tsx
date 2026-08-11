@@ -109,6 +109,14 @@ export default function LandingPage() {
             >
               xavimarin.net
             </a>
+            <a
+              href="https://ai-po-xavi-marin-suite.vercel.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-gray-500 hover:text-gray-700 transition-colors hidden sm:block"
+            >
+              ← AI PO Suite
+            </a>
             <Link
               href="/demo"
               className="text-xs font-semibold text-white bg-brand-500 hover:bg-brand-600 rounded-lg px-3.5 py-1.5 transition-colors"
