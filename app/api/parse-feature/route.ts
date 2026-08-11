@@ -9,6 +9,48 @@ import type { NextRequest } from 'next/server';
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
+/**
+ * Llama sometimes returns raw, unescaped control characters (literal
+ * newlines, tabs) inside JSON string values instead of \n / \t. That's
+ * invalid JSON and makes JSON.parse throw "Bad control character in
+ * string literal". This escapes control characters that appear *inside*
+ * string literals only, leaving the JSON structure (outside strings)
+ * untouched.
+ */
+function safeJsonParse<T>(text: string): T {
+  let inString = false;
+  let escaped = false;
+  let result = '';
+  for (const ch of text) {
+    if (inString) {
+      if (escaped) {
+        result += ch;
+        escaped = false;
+      } else if (ch === '\\') {
+        result += ch;
+        escaped = true;
+      } else if (ch === '"') {
+        result += ch;
+        inString = false;
+      } else if (ch === '\n') {
+        result += '\\n';
+      } else if (ch === '\r') {
+        result += '\\r';
+      } else if (ch === '\t') {
+        result += '\\t';
+      } else if (ch.charCodeAt(0) < 0x20) {
+        // Drop other stray control characters.
+      } else {
+        result += ch;
+      }
+    } else {
+      result += ch;
+      if (ch === '"') inString = true;
+    }
+  }
+  return JSON.parse(result) as T;
+}
+
 const SYSTEM_PROMPT = `You are a Product Owner assistant.
 Given a free-text description of a software feature, extract the following fields and return ONLY valid JSON — no markdown, no explanation, just the JSON object.
 
@@ -62,7 +104,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const parsed = JSON.parse(jsonMatch[0]);
+    const parsed = safeJsonParse<Record<string, unknown>>(jsonMatch[0]);
 
     const required = ['featureTitle', 'persona', 'mainGoal', 'benefit'];
     for (const field of required) {
