@@ -58,12 +58,18 @@ interface Rect {
   left: number;
   width: number;
   height: number;
+  /** The target's own corner radius, so the ring is framed to its shape. */
+  radius: number;
 }
 
 const W = 340;
-const H = 210;
-const PAD = 8;
+const FALLBACK_H = 210;
 const M = 16;
+const GAP = 16;
+
+type Side = 'top' | 'bottom' | 'left' | 'right';
+const OPPOSITE: Record<Side, Side> = { top: 'bottom', bottom: 'top', left: 'right', right: 'left' };
+const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(v, Math.max(lo, hi)));
 
 interface TourProviderProps {
   /** The steps for THIS tool — import them from lib/tour.ts. */
@@ -78,7 +84,10 @@ export default function TourProvider({ steps, children, floating = true }: TourP
   const [index, setIndex] = useState(0);
   const [rect, setRect] = useState<Rect | null>(null);
   const [vp, setVp] = useState({ w: 0, h: 0 });
+  const [tipH, setTipH] = useState(FALLBACK_H);
   const raf = useRef<number | null>(null);
+  const timer = useRef<number | null>(null);
+  const tipRef = useRef<HTMLDivElement | null>(null);
 
   const step = running ? steps[Math.min(index, steps.length - 1)] : undefined;
 
@@ -97,27 +106,47 @@ export default function TourProvider({ steps, children, floating = true }: TourP
         return;
       }
       const r = el.getBoundingClientRect();
-      if (r.top < M || r.bottom > window.innerHeight - M) {
-        window.scrollTo({
-          top: window.scrollY + r.top - window.innerHeight / 2 + r.height / 2,
-          behavior: 'smooth',
-        });
-        window.setTimeout(() => {
-          const a = el.getBoundingClientRect();
-          setRect({ top: a.top, left: a.left, width: a.width, height: a.height });
-        }, 320);
+      const radius = parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0;
+      // Bring a partially visible target fully into view before measuring,
+      // otherwise the ring clamps against the edge and crops the element it
+      // is framing. Instant, not smooth: a smooth scroll would still be
+      // running when we re-read the rect. Pinned elements (sticky header,
+      // fixed bars) are skipped — scrolling moves the page but not them,
+      // which only knocks the ring out of place.
+      let pinned = false;
+      for (let node: HTMLElement | null = el; node && node !== document.body; node = node.parentElement) {
+        const pos = getComputedStyle(node).position;
+        if (pos === 'fixed' || pos === 'sticky') {
+          pinned = true;
+          break;
+        }
+      }
+      if (!pinned && (r.top < 60 || r.bottom > window.innerHeight - 24)) {
+        window.scrollTo(
+          0,
+          Math.max(0, window.scrollY + r.top - (window.innerHeight - r.height) / 2),
+        );
+        const a = el.getBoundingClientRect();
+        setRect({ top: a.top, left: a.left, width: a.width, height: a.height, radius });
         return;
       }
-      setRect({ top: r.top, left: r.left, width: r.width, height: r.height });
+      setRect({ top: r.top, left: r.left, width: r.width, height: r.height, radius });
     },
     [steps],
   );
 
-  /** Index passed explicitly so a queued measure cannot read stale state. */
+  /**
+   * rAF alone is unreliable when the tool runs inside the suite's iframe
+   * (throttled / offscreen), so a timer backs it up. Measuring twice is
+   * harmless. The index is passed explicitly so a queued measurement cannot
+   * read stale state.
+   */
   const scheduleMeasure = useCallback(
     (i: number) => {
       if (raf.current) cancelAnimationFrame(raf.current);
+      if (timer.current) window.clearTimeout(timer.current);
       raf.current = requestAnimationFrame(() => requestAnimationFrame(() => measure(i)));
+      timer.current = window.setTimeout(() => measure(i), 60);
     },
     [measure],
   );
@@ -185,6 +214,7 @@ export default function TourProvider({ steps, children, floating = true }: TourP
 
   useEffect(() => () => {
     if (raf.current) cancelAnimationFrame(raf.current);
+    if (timer.current) window.clearTimeout(timer.current);
   }, []);
 
   const value = useMemo<TourContextValue>(
@@ -192,30 +222,85 @@ export default function TourProvider({ steps, children, floating = true }: TourP
     [startTour, stopTour, running, steps.length],
   );
 
+  /** Measure the card so tall copy never gets clamped over its own target. */
+  useEffect(() => {
+    if (!tipRef.current) return;
+    const h = tipRef.current.getBoundingClientRect().height;
+    if (h && Math.abs(h - tipH) > 1) setTipH(h);
+  });
+
+  /** Ring clamped to the viewport, so a full-height target still reads as a frame. */
+  const padding = rect && (rect.height > vp.h * 0.6 || rect.width > vp.w * 0.6) ? 4 : 8;
+  const ring = rect
+    ? {
+        top: Math.max(M / 2, rect.top - padding),
+        left: Math.max(M / 2, rect.left - padding),
+        right: Math.min(vp.w - M / 2, rect.left + rect.width + padding),
+        bottom: Math.min(vp.h - M / 2, rect.top + rect.height + padding),
+      }
+    : null;
+
+  /**
+   * Pick the side that actually has room, instead of clamping a fixed side
+   * back into the viewport — clamping is what drops the card on its target.
+   */
   const tip = (() => {
-    if (!rect) {
+    if (!ring) {
       return {
-        top: Math.max(M, vp.h / 2 - H / 2),
+        top: Math.max(M, vp.h / 2 - tipH / 2),
         left: Math.max(M, vp.w / 2 - W / 2),
       };
     }
-    const place = step?.place ?? 'bottom';
-    let top = rect.top + rect.height + 18;
-    let left = rect.left;
-    if (place === 'right') {
-      left = rect.left + rect.width + 20;
-      top = rect.top;
-    } else if (place === 'left') {
-      left = rect.left - W - 20;
-      top = rect.top;
-    } else if (place === 'top') {
-      top = rect.top - H - 18;
-    }
-    if (left + W > vp.w - M) left = vp.w - W - M;
-    if (left < M) left = M;
-    if (top + H > vp.h - M) top = vp.h - H - M;
-    if (top < M) top = M;
-    return { top: Math.round(top), left: Math.round(left) };
+
+    const room: Record<Side, number> = {
+      right: vp.w - ring.right - GAP - M,
+      left: ring.left - GAP - M,
+      bottom: vp.h - ring.bottom - GAP - M,
+      top: ring.top - GAP - M,
+    };
+    const preferred = (step?.place ?? 'bottom') as Side;
+    const order: Side[] = [preferred, OPPOSITE[preferred], 'bottom', 'top', 'right', 'left'];
+    const fits = (s: Side) => (s === 'left' || s === 'right' ? room[s] >= W : room[s] >= tipH);
+
+    const place = (s: Side) => {
+      let top: number;
+      let left: number;
+      if (s === 'right') {
+        left = ring.right + GAP;
+        top = clamp(ring.top, M, vp.h - tipH - M);
+      } else if (s === 'left') {
+        left = ring.left - GAP - W;
+        top = clamp(ring.top, M, vp.h - tipH - M);
+      } else if (s === 'top') {
+        top = ring.top - GAP - tipH;
+        left = clamp(ring.left, M, vp.w - W - M);
+      } else {
+        top = ring.bottom + GAP;
+        left = clamp(ring.left, M, vp.w - W - M);
+      }
+      return {
+        side: s,
+        top: clamp(top, M, vp.h - tipH - M),
+        left: clamp(left, M, vp.w - W - M),
+      };
+    };
+
+    const overlap = (p: { top: number; left: number }) =>
+      Math.max(0, Math.min(p.left + W, ring.right) - Math.max(p.left, ring.left)) *
+      Math.max(0, Math.min(p.top + tipH, ring.bottom) - Math.max(p.top, ring.top));
+
+    // When a side genuinely fits, use it. When none does — short viewport,
+    // large target, the common case inside the suite's iframe — pick the
+    // candidate that covers the target the least, rather than clamping a
+    // preferred side back on top of it.
+    const fitting = order.find(fits);
+    const pos = fitting
+      ? place(fitting)
+      : (['bottom', 'top', 'right', 'left'] as Side[])
+          .map(place)
+          .sort((a, b) => overlap(a) - overlap(b) || room[b.side] - room[a.side])[0];
+
+    return { top: Math.round(pos.top), left: Math.round(pos.left) };
   })();
 
   return (
@@ -236,20 +321,22 @@ export default function TourProvider({ steps, children, floating = true }: TourP
         <div className="fixed inset-0 z-[100]" role="dialog" aria-modal="true" aria-label="Guided tour">
           <div onClick={stopTour} className={`absolute inset-0 ${rect ? '' : 'bg-gray-900/60'}`} />
 
-          {rect && (
+          {ring && (
             <div
-              className="absolute rounded-2xl border-2 border-brand-500 pointer-events-none transition-all duration-300 ease-out"
+              className="absolute border-2 border-brand-500 pointer-events-none transition-all duration-300 ease-out"
               style={{
-                top: rect.top - PAD,
-                left: rect.left - PAD,
-                width: rect.width + PAD * 2,
-                height: rect.height + PAD * 2,
+                top: ring.top,
+                left: ring.left,
+                width: ring.right - ring.left,
+                height: ring.bottom - ring.top,
+                borderRadius: Math.min((rect?.radius ?? 6) + padding, (ring.bottom - ring.top) / 2),
                 boxShadow: '0 0 0 9999px rgba(17, 24, 39, 0.6)',
               }}
             />
           )}
 
           <div
+            ref={tipRef}
             className="absolute w-[340px] bg-white border border-gray-200 rounded-2xl p-5 shadow-xl transition-all duration-300 ease-out"
             style={{ top: tip.top, left: tip.left }}
           >
