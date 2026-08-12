@@ -99,6 +99,7 @@ export default function DemoPage() {
             Fill in the feature details and generate structured stories — or{' '}
             <button
               onClick={() => setForm(SAMPLE_DATA)}
+              data-tour="sample"
               className="text-brand-600 hover:text-brand-800 underline transition-colors"
             >
               load sample data
@@ -109,7 +110,7 @@ export default function DemoPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
           {/* Form */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2" data-tour="input">
             <StoryForm
               values={form}
               onChange={setForm}
@@ -138,7 +139,7 @@ export default function DemoPage() {
           </div>
 
           {/* Results */}
-          <div id="results" className="lg:col-span-3 space-y-4">
+          <div id="results" className="lg:col-span-3 space-y-4" data-tour="results">
             {stories.length === 0 && !loading && (
               <div className="flex flex-col items-center justify-center text-center py-20 px-6 bg-white rounded-xl border border-dashed border-gray-300">
                 <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center mb-4">
@@ -168,7 +169,7 @@ export default function DemoPage() {
                     {stories.length} stories
                     <span className="font-normal text-gray-500 ml-1.5">· {form.featureTitle}</span>
                   </p>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2" data-tour="export">
                     <button
                       onClick={() => downloadCSV(stories, form.featureTitle)}
                       className="flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 bg-white hover:bg-gray-50 border border-gray-300 rounded-lg px-3 py-1.5 transition-colors"

@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import TourProvider from '@/components/tour/TourProvider';
+import { getTourFor } from '@/lib/tour';
 
 export const metadata: Metadata = {
   title: 'User Story Generator — by Xavi Marín',
@@ -15,6 +17,8 @@ export const metadata: Metadata = {
   },
 };
 
+const STEPS = getTourFor('user-stories-generator');
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
@@ -27,7 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="font-sans bg-gray-50 text-gray-900 min-h-screen antialiased">
-        {children}
+        <TourProvider steps={STEPS}>{children}</TourProvider>
       </body>
     </html>
   );

@@ -248,6 +248,7 @@ export default function StoryForm({ values, onChange, onGenerate, loading }: Sto
           <button
             type="submit"
             disabled={!isValid || loading}
+            data-tour="run"
             className="w-full py-3 px-6 rounded-xl bg-brand-500 hover:bg-brand-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold transition-colors shadow-sm"
           >
             {loading ? (
