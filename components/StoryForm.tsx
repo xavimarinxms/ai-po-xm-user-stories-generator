@@ -132,6 +132,7 @@ export default function StoryForm({ values, onChange, onGenerate, loading }: Sto
               </>
             )}
           </button>
+          <p className="text-[11px] text-gray-400 text-center">Powered by Groq (GPT-OSS 120B, free tier)</p>
         </div>
 
         {/* ── Divider ── */}

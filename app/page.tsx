@@ -4,7 +4,7 @@ const HOW_IT_WORKS = [
   {
     step: '01',
     title: 'Describe your feature',
-    desc: 'Enter the feature title, user persona, main goal, and expected benefit. Or paste a sentence and let AI parse it for you.',
+    desc: 'Enter the feature title, user persona, main goal, and expected benefit. Or paste a sentence and let Groq (GPT-OSS 120B) parse it for you.',
   },
   {
     step: '02',
