@@ -1,6 +1,6 @@
 /**
  * app/api/parse-feature/route.ts
- * Calls Groq (Llama 3.1 8B) to extract structured fields from free-text input.
+ * Calls Groq (GPT-OSS 120B) to extract structured fields from free-text input.
  * Returns: { featureTitle, persona, mainGoal, benefit, context }
  */
 
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
     }
 
     const completion = await groq.chat.completions.create({
-      model: 'llama-3.1-8b-instant',
+      model: 'openai/gpt-oss-120b',
       temperature: 0.3,
       max_tokens: 300,
       messages: [
